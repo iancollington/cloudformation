@@ -1,0 +1,145 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Amazon RDS Aurora"
+
+Parameters:
+
+  VpcId:
+    Type: String
+    Description: "The VPC ID"  
+
+  SubnetIds:
+    Type: String
+    Description: "Subnet IDs"
+
+  ClientSecurityGroup:
+    Description: The security group of the client that will access the RDS instance.
+    Type: AWS::EC2::SecurityGroup::Id
+
+  DatabaseUser:
+    Default: startupadmin
+    Type: String
+    Description: Database admin account name
+    MinLength: 5
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Name must begin with a letter and contain only alphanumeric characters
+
+  DatabasePassword:
+    NoEcho: true
+    Type: String
+    Description: Database admin account password
+    MinLength: 6
+    MaxLength: 41
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: Password must contain only alphanumeric characters
+
+  DatabaseEngine:
+    Default: aurora
+    Type: String
+    Description: Database engines - Aurora MySQL or Aurora PostgreSQL
+    ConstraintDescription: Choose an engine from the drop down
+    AllowedValues:
+      - aurora
+      - aurora-postgresql
+
+  DatabaseEngineMode:
+    Type: String
+    Description: Database engine mode - provisioned or serverless
+    ConstraintDescription: Choose an engine mode from the drop down
+    AllowedValues:
+      - provisioned
+      - serverless
+
+  EncryptionAtRest:
+    Default: false
+    Type: String
+    Description: The optional flag for encryption at rest (db.t2.small and above)
+    ConstraintDescription: Only true or false are allowed
+    AllowedValues:
+      - true
+      - false
+
+  DatabaseInstanceClass:
+    Default: db.t2.small
+    Type: String
+    Description: "Database instance class, e.g. db.t2.micro (free tier) - Engine support: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.DBInstanceClass.html"
+    ConstraintDescription: DB instance class not supported
+    AllowedValues:
+      - db.t2.small
+      - db.t2.medium
+      - db.t2.xlarge
+      - db.r4.large
+      - db.r4.xlarge
+      - db.r4.2xlarge
+      - db.r4.4xlarge
+      - db.r4.8xlarge
+      - db.r4.16xlarge
+
+Resources:
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Database subnet group
+      SubnetIds: !Split [ ",", !Ref SubnetIds ]
+      Tags:
+      - Key: Name
+        Value: !Ref AWS::StackName
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for RDS database
+      VpcId:
+        !Ref VpcId
+
+  RDSSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: RDSSecurityGroup
+    Properties:
+      Description: Allow clients to connect to the database
+      GroupId: !Ref RDSSecurityGroup
+      SourceSecurityGroupId: !Ref ClientSecurityGroup
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: !Ref DatabaseEngine
+      EngineMode: !Ref DatabaseEngineMode
+      MasterUsername: !Ref DatabaseUser
+      MasterUserPassword: !Ref DatabasePassword
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      StorageEncrypted: !Ref EncryptionAtRest
+      DBClusterParameterGroupName: default.aurora5.6
+      Port: 3306
+      VpcSecurityGroupIds: [!Ref RDSSecurityGroup]
+    DependsOn: DatabaseSubnetGroup
+
+Outputs:
+
+  Name:
+    Description: Aurora Stack Name
+    Value: !Ref AWS::StackName
+    Export:
+      Name: !Sub ${AWS::StackName}-Name
+
+  AuroraClusterId:
+    Description: Aurora Cluster ID
+    Value: !Ref AuroraCluster
+    Export:
+      Name: !Sub ${AWS::StackName}-AuroraClusterID
+
+  AuroraDbURL:
+    Description: Aurora Database URL
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: !Sub ${AWS::StackName}-DatabaseURL
+
+  DbUser:
+    Description: RDS Database admin account user
+    Value: !Ref DatabaseUser
+    Export:
+      Name: !Sub ${AWS::StackName}-DatabaseUser

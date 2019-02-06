@@ -9,10 +9,6 @@ Parameters:
       The logical order is preserved.'
     Type: List<AWS::EC2::AvailabilityZone::Name>
     Default: 'us-east-1a, us-east-1b'
-  VpcBlock:
-    Type: String
-    Default: 192.168.0.0/16
-    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
 
   Subnet01Block:
     Type: String
@@ -28,6 +24,15 @@ Parameters:
     Type: String
     Default: 192.168.192.0/18
     Description: CidrBlock for subnet 03 within the VPC
+
+  VpcBlock:
+    Type: String
+    Default: 192.168.0.0/16
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+
+  VpcName:
+    Type: String
+    Description: The name of the VPC
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -50,7 +55,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-VPC'
+        Value: !Ref VpcName
 
   InternetGateway:
     Type: "AWS::EC2::InternetGateway"

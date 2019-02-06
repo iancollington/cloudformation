@@ -305,6 +305,7 @@ Resources:
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: !Ref NodeImageId
       InstanceType: !Ref NodeInstanceType
+      SpotPrice: 0.05
       KeyName: !Ref KeyName
       SecurityGroups:
       - !Ref NodeSecurityGroup
